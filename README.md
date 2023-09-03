@@ -7,9 +7,9 @@ docker run --name mongodb -d -p 27017:27017 mongodb/mongodb-community-server
  ```
 
 references:
-https://www.mongodb.com/docs/manual/tutorial/install-mongodb-enterprise-with-docker/
-https://www.mongodb.com/docs/drivers/
-https://www.mongodb.com/docs/manual/tutorial/project-fields-from-query-results/
+* https://www.mongodb.com/docs/manual/tutorial/install-mongodb-enterprise-with-docker/
+* https://www.mongodb.com/docs/drivers/
+* https://www.mongodb.com/docs/manual/tutorial/project-fields-from-query-results/
 
 * run mongo shell
 ```sh 
