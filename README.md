@@ -7,26 +7,24 @@ docker run --name mongodb -d -p 27017:27017 mongodb/mongodb-community-server
  ```
 
 references:
-* https://www.mongodb.com/docs/manual/tutorial/install-mongodb-enterprise-with-docker/
-* https://www.mongodb.com/docs/drivers/
-* https://www.mongodb.com/docs/manual/tutorial/project-fields-from-query-results/
+
+https://www.mongodb.com/docs/manual/tutorial/install-mongodb-enterprise-with-docker/
 
 ##### run mongo shell
 ```sh 
 docker exec -it mongodb mongo
 ```
-* show databases
+show databases
 
 ```sh 
 show dbs
 ```
 
-* create database (if database doesn't exist will be created on demand)
+create database (if database doesn't exist will be created on demand)
 ```sh 
 use flights
 ```
-
-* create collection (if collection doesn't exist will be created on demand) and insert data, _id will be generated automatically
+create collection (if collection doesn't exist will be created on demand) and insert data, _id will be generated automatically
 place document inside insertOne method
 
 ```sh 
@@ -36,13 +34,13 @@ db.flightData.insertOne({})
 db.flightData.insertOne({"departureAirport":"MUC","arrivalAirport":"SFO","aircraft":"Airbus A380","distance":12000,"intercontinental":true})
 ```
 
-* fetch or find all documents in collection
+fetch or find all documents in collection
 
 ```sh 
 db.flightData.find().pretty()
 ```
 
-* json vs bson => JSON and BSON are close cousins, as their nearly identical names imply, but you wouldn’t know it by looking at them side by side. JSON, or JavaScript Object Notation, is the wildly popular standard for data interchange on the web, on which BSON (Binary JSON) is based.
+json vs bson => JSON and BSON are close cousins, as their nearly identical names imply, but you wouldn’t know it by looking at them side by side. JSON, or JavaScript Object Notation, is the wildly popular standard for data interchange on the web, on which BSON (Binary JSON) is based.
 
 
 ## crud operations
@@ -79,31 +77,31 @@ deleteOne(filter, options)
 deleteMany(filter, options)
 ```
 
-* delete one
+delete one
 ```sh
 db.flightData.deleteOne({distance:12000})
 ```
-*delete many
+delete many
 ```sh
 db.flightData.deleteMany({})
 ```
 
-* update one, set marker to delete (first insert document)
+update one, set marker to delete (first insert document)
 ```sh
 db.flightData.insertOne({"departureAirport":"MUC","arrivalAirport":"SFO","aircraft":"Airbus A380","distance":12000,"intercontinental":true})
 db.flightData.updateOne({distance:12000}, {$set: {marker: "delete"}})
 ```
-* update all
+update all
 ```sh
 db.flightData.updateMany({}, {$set: {marker: "toDelete"}})
 ```
 
-* delete all
+delete all
 ```sh
 db.flightData.deleteMany({})
 ```
 
-* insert many
+insert many
 ```sh
 db.flightData.insertMany([
     {"departureAirport":"MUC","arrivalAirport":"SFO","aircraft":"Airbus A380","distance":12000,"intercontinental":true},
@@ -111,36 +109,36 @@ db.flightData.insertMany([
 ])
 ```
 
-* find all
+find all
 ```sh   
 db.flightData.find().pretty()
 ```
-* find all with filter
+find all with filter
 ```sh
 db.flightData.find({distance: 950}).pretty()
 db.flightData.find({distance: {$gt: 1000}}).pretty()
 db.flightData.find({distance: {$gt: 1000}, intercontinental: true}).pretty()
 ```
 
-* find one, returns first document matching filter
+find one, returns first document matching filter
 ```sh
 db.flightData.findOne({distance: 950})
 ```
 
-* update vs updateMany, update replaces the whole document, updateMany updates all documents matching filter
+update vs updateMany, update replaces the whole document, updateMany updates all documents matching filter
 ```sh
 ```sh
 db.flightData.updateOne({distance: 950}, {$set: {delayed: true}})
 ```
 
-* replaceOne, replaces the whole document
+replaceOne, replaces the whole document
 ```sh
 db.flightData.replaceOne({distance: 950}, {marker: "delete"})
 ```
 
-* understanding find and cursor object
+understanding find and cursor object
 
-* add many passengers to flightData
+add many passengers to flightData
 ```sh
 db.passengers.insertMany([
   {"name":"Max Schwarzmueller","age":29},
@@ -191,36 +189,41 @@ For Example, If a Document contains 10 fields and only 5 fields are to be shown 
 
 **Filter and operators limit the documents that are returned from the query, but projection limits the fields that are returned from the query.**
 
-* find all passengers and show only name, _id is always shown, if you don't want to show _id you have to explicitly set it to 0
+find all passengers and show only name, _id is always shown, if you don't want to show _id you have to explicitly set it to 0
 ```sh
 db.passengers.find({}, {name: 1})
 ```
-* find all passengers and show only name and exclude _id
+find all passengers and show only name and exclude _id
 ```sh
 db.passengers.find({}, {name: 1, _id: 0})
 ```
 
 #### embedded documents (nested documents)
 The maximum size an individual document can be in MongoDB is 16MB with a nested depth of 100 levels
-* insert document with embedded document
+
+insert document with embedded document
 ```sh
 db.flightData.updateMany({}, {$set: {status: {description: "on-time",lastUpdated: "1 hour ago" }}})
 db.flightData.updateMany({}, {$set: {status: {description: "on-time",lastUpdated: "1 hour ago", details: {responsible: "Arya"}}}})
 ```
 
-* working with arrays
+working with arrays
 ```sh
 db.passengers.updateOne({name: "Albert Twostone"}, {$set: {hobbies: ["cricket", "running", "travel"]}})
 ```
-* accessing structured data
+accessing structured data
 ```sh
 db.passengers.findOne({name: "Albert Twostone"}).hobbies
 ``` 
-* query for data in array
+query for data in array
 ```sh
 db.passengers.find({hobbies: "travel"}).pretty()
 ```
-* query data in object
+query data in object
 ```sh
 db.flightData.find({"status.description": "on-time"}).pretty()
 ```
+
+references: 
+* https://www.mongodb.com/docs/drivers/
+* https://www.mongodb.com/docs/manual/tutorial/project-fields-from-query-results/
