@@ -185,6 +185,9 @@ db.passengers.find().forEach((passenger) => {printjson(passenger)})
 ### understanding projection
 Allowing you to select only the necessary data rather than selecting the whole set of data from the document.
 For Example, If a Document contains 10 fields and only 5 fields are to be shown the same can be achieved using the Projections.
+
+**Filter and operators limit the documents that are returned from the query, but projection limits the fields that are returned from the query.**
+
 * find all passengers and show only name, _id is always shown, if you don't want to show _id you have to explicitly set it to 0
 ```sh
 db.passengers.find({}, {name: 1})
