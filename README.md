@@ -134,3 +134,87 @@ db.flightData.updateOne({distance: 950}, {$set: {delayed: true}})
 ```sh
 db.flightData.replaceOne({distance: 950}, {marker: "delete"})
 ```
+
+* understanding find and cursor object
+
+* add many passengers to flightData
+```sh
+db.passengers.insertMany([
+  {"name":"Max Schwarzmueller","age":29},
+  {"name":"Manu Lorenz","age":30},
+  {"name":"Chris Hayton","age":35},
+  {"name":"Sandeep Kumar","age":28},
+  {"name":"Maria Jones","age":30},
+  {"name":"Alexandra Maier","age":27},
+  {"name":"Dr. Phil Evans","age":47},
+  {"name":"Sandra Brugge","age":33},
+  {"name":"Elisabeth Mayr","age":29},
+  {"name":"Frank Cube","age":41},
+  {"name":"Karandeep Alun","age":48},
+  {"name":"Michaela Drayer","age":39},
+  {"name":"Bernd Hoftstadt","age":22},
+  {"name":"Scott Tolib","age":44},
+  {"name":"Freddy Melver","age":41},
+  {"name":"Alexis Bohed","age":35},
+  {"name":"Melanie Palace","age":27},
+  {"name":"Armin Glutch","age":35},
+  {"name":"Klaus Arber","age":53},
+  {"name":"Albert Twostone","age":68},
+  {"name":"Gordon Black","age":38}
+])
+```
+
+find() gives us curser back and we can use it to iterate over the documents
+```sh
+db.passengers.find()
+```
+Type "it" for more
+```sh
+it
+```
+
+to get all documents without cursor
+```sh
+db.passengers.find().toArray()
+```
+iterate over documents, forEach will fetch each document and print it, it will not load all documents into memory
+```sh
+db.passengers.find().forEach((passenger) => {printjson(passenger)})
+```
+
+### understanding projection
+Allowing you to select only the necessary data rather than selecting the whole set of data from the document.
+For Example, If a Document contains 10 fields and only 5 fields are to be shown the same can be achieved using the Projections.
+* find all passengers and show only name, _id is always shown, if you don't want to show _id you have to explicitly set it to 0
+```sh
+db.passengers.find({}, {name: 1})
+```
+* find all passengers and show only name and exclude _id
+```sh
+db.passengers.find({}, {name: 1, _id: 0})
+```
+
+#### embedded documents (nested documents)
+The maximum size an individual document can be in MongoDB is 16MB with a nested depth of 100 levels
+* insert document with embedded document
+```sh
+db.flightData.updateMany({}, {$set: {status: {description: "on-time",lastUpdated: "1 hour ago" }}})
+db.flightData.updateMany({}, {$set: {status: {description: "on-time",lastUpdated: "1 hour ago", details: {responsible: "Arya"}}}})
+```
+
+* working with arrays
+```sh
+db.passengers.updateOne({name: "Albert Twostone"}, {$set: {hobbies: ["cricket", "running", "travel"]}})
+```
+* accessing structured data
+```sh
+db.passengers.findOne({name: "Albert Twostone"}).hobbies
+``` 
+* query for data in array
+```sh
+db.passengers.find({hobbies: "travel"}).pretty()
+```
+* query data in object
+```sh
+db.flightData.find({"status.description": "on-time"}).pretty()
+```
