@@ -14,6 +14,9 @@ https://www.mongodb.com/docs/manual/tutorial/install-mongodb-enterprise-with-doc
 ```sh 
 docker exec -it mongodb mongo
 ```
+
+## Understanding the Basics & CRUD Operations
+
 show databases
 
 ```sh 
@@ -227,3 +230,32 @@ db.flightData.find({"status.description": "on-time"}).pretty()
 references: 
 * https://www.mongodb.com/docs/drivers/
 * https://www.mongodb.com/docs/manual/tutorial/project-fields-from-query-results/
+
+## Schema & Relations: How to Structure Documents
+
+#### Resetting the Database
+```sh
+use flights
+db.dropDatabase()
+```
+
+#### Schema
+MongoDB enforces no schema! Documents do no have to use the same schema inside of one collection
+
+#### Data Types
+
+MongoDB has a couple of hard limits - most importantly, a single document in a collection (including all embedded documents it might have) must be <= 16mb. Additionally, you may only have 100 levels of embedded documents.
+
+You can find all limits (in great detail) here: https://docs.mongodb.com/manual/reference/limits/
+
+For the data types, MongoDB supports, you find a detailed overview on this page: https://docs.mongodb.com/manual/reference/bson-types/
+
+example:
+```sh
+use companyData
+db.companies.insertOne({ name: "apple inc", isStartup: true, employees: 33, funding: 12345678901234567890, details: { ceo: "Arya" }, tags: [{ title: "super" }, { title: "perfact" }], foundingData: new Date(), insertedAt: new Timestamp() })
+```
+check data base stats
+```sh
+db.stats()
+```
