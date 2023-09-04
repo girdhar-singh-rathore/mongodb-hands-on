@@ -259,3 +259,127 @@ check data base stats
 ```sh
 db.stats()
 ```
+
+#### Example exercise => users, posts[comments] collections
+```sh
+use blog
+db.users.insertMany([{ _id: "user1", name: "Max", age: 29, email: "abc@gmail.com" }, { _id: "user2", name: "Manu", age: 30, email: "def@gmail.com" }])
+db.users.find().pretty()
+
+db.posts.insertOne({_id: "post1", title: "My first Post", text: "This is my first post", tags: ["new", "tech"], creator: "user1", comments: [{text: "I like this post", author: "user2"}]})
+db.posts.find().pretty()
+```
+
+#### Adding collection document validation
+```sh
+db.posts.drop()
+
+db.createCollection("posts", {
+    validator: {
+        $jsonSchema: {
+            bsonType: "object",
+            required: ["title", "text", "creator", "comments"],
+            properties: {
+                title: {
+                    bsonType: "string",
+                    description: "must be a string and is required"
+                },
+                text: {
+                    bsonType: "string",
+                    description: "must be a string and is required"
+                },
+                creator: {
+                    bsonType: "objectId",
+                    description: "must be a objectId and is required"
+                },
+                comments: {
+                    bsonType: "array",
+                    description: "must be a array and is required",
+                    items: {
+                        bsonType: "object",
+                        required: ["text", "author"],
+                        properties: {
+                            text: {
+                                bsonType: "string",
+                                description: "must be a string and is required"
+                            },
+                            author: {
+                                bsonType: "objectId",
+                                description: "must be a objectId and is required"
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+})
+
+db.posts.insertOne({_id: "post1", title: "My first Post", text: "This is my first post", tags: ["new", "tech"], creator: "user1", comments: [{text: "I like this post", author: "user2"}]})
+# Error: Document failed validation
+#modify the validation
+
+
+db.runCommand({
+    collMod: "posts",
+    validator: {
+
+        db.createCollection("posts", {
+            validator: {
+                $jsonSchema: {
+                    bsonType: "object",
+                    required: ["title", "text", "creator", "comments"],
+                    properties: {
+                        title: {
+                            bsonType: "string",
+                            description: "must be a string and is required"
+                        },
+                        text: {
+                            bsonType: "string",
+                            description: "must be a string and is required"
+                        },
+                        creator: {
+                            bsonType: "string",
+                            description: "must be a objectId and is required"
+                        },
+                        comments: {
+                            bsonType: "array",
+                            description: "must be a array and is required",
+                            items: {
+                                bsonType: "object",
+                                required: ["text", "author"],
+                                properties: {
+                                    text: {
+                                        bsonType: "string",
+                                        description: "must be a string and is required"
+                                    },
+                                    author: {
+                                        bsonType: "string",
+                                        description: "must be a objectId and is required"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        })
+
+    },
+    validationAction: 'warn'
+})
+
+
+db.posts.insertOne({_id: "post1", title: "My first Post", text: "This is my first post", tags: ["new", "tech"], creator: "user1", comments: [{text: "I like this post", author: "user2"}]})
+
+```
+
+Useful Resources & Links
+Helpful Articles/ Docs:
+
+The MongoDB Limits: https://docs.mongodb.com/manual/reference/limits/
+
+The MongoDB Data Types: https://docs.mongodb.com/manual/reference/bson-types/
+
+More on Schema Validation: https://docs.mongodb.com/manual/core/schema-validation/
+
