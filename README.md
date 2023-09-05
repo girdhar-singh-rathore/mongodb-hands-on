@@ -402,3 +402,87 @@ More Details about the Shell (mongo) Options: https://www.mongodb.com/docs/manua
 
 More Details about the Server (mongod) Options: https://docs.mongodb.com/manual/reference/program/mongod/
 
+## Create & Insert Documents deep dive
+
+insertOne
+```sh
+db.collectionName.insertOne({field: value})
+```
+
+insertMany
+```sh
+db.collectionName.insertMany([{field: value}, {field: value}])
+```
+
+insert
+```sh
+db.collectionName.insert()
+```
+
+mongoimport
+```sh
+mongoimport -d cars -c carsList --drop --jsonArray 
+```
+
+```sh
+use contactData
+db.persons.insertOne({name: "Max", age: 29, hobbies: ["Sports", "Cooking"]})
+db.persons.insertMany([{name: "Manu", age: 30, hobbies: ["Eating", "Walking"]}, {name: "Anna", age: 27, hobbies: ["Reading", "Running"]}])
+```
+
+insert() can be use to insert single or multiple documents
+```sh
+db.persons.insert({name: "Maria", age: 29, hobbies: ["Sports", "Cooking"]})
+```
+
+insert with option ordered false, if one document fails to insert it will continue to insert other documents
+```sh
+db.customers.insertMany([{_id: "person1", name: "Maria"}, {_id: "person1", name: "Max"}], {ordered: false})
+```
+
+insert with option writeConcern, writeConcern is the number of nodes that have to confirm the write operation
+```sh
+db.customers.insertMany([{_id: "person1", name: "Maria"}, {_id: "person1", name: "Max"}], {writeConcern: {w: 0}})
+db.customers.insertMany([{_id: "person1", name: "Maria"}, {_id: "person1", name: "Max"}], {writeConcern: {w: 1}})
+```
+
+#### Automicity
+In MongoDB, a write operation is atomic on the level of a single document, even if the operation modifies multiple embedded documents within a single document.
+
+When a single write operation (e.g. db.collection.updateMany()) modifies multiple documents, the modification of each document is atomic, but the operation as a whole is not atomic.
+
+
+```sh
+
+use companyData
+db.companies.insertOne({name: "Max", stock: 100, _id: 1})
+db.companies.insertMany([{name: "Manu", stock: 100, _id: 2}, {name: "Anna", stock: 100, _id: 3}])
+# Error: E11000 duplicate key error collection: companyData.companies index: _id_ dup key: { _id: 1.0 }
+db.companies.insertMany([{name: "Maria", stock: 100, _id: 1}, {name: "Chris", stock: 100, _id: 5}])
+#set ordered to false, it will add all documents except the one with duplicate key
+db.companies.insertMany([{name: "Maria", stock: 100, _id: 1}, {name: "Chris", stock: 100, _id: 5}], {ordered: false})
+#set writeConcert journal to false
+db.companies.insertOne({name: "Maria", stock: 100, _id: 6}, {writeConcern: {w: 0, j: false}})
+#set writeConcert journal to true
+db.companies.insertOne({name: "Maria", stock: 100, _id: 7}, {writeConcern: {w: 0, j: true}})
+```
+
+#### Import data
+```sh
+mongoimport tv-shows.json -d movieData -c movies --jsonArray --drop
+```
+
+Useful Resources & Links
+Helpful Articles/ Docs:
+
+insertOne(): https://docs.mongodb.com/manual/reference/method/db.collection.insertOne/
+
+insertMany(): https://docs.mongodb.com/manual/reference/method/db.collection.insertMany/
+
+Atomicity: https://docs.mongodb.com/manual/core/write-operations-atomicity/#atomicity
+
+Write Concern: https://docs.mongodb.com/manual/reference/write-concern/
+
+Using mongoimport: https://docs.mongodb.com/manual/reference/program/mongoimport/index.html
+
+
