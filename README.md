@@ -469,7 +469,12 @@ db.companies.insertOne({name: "Maria", stock: 100, _id: 7}, {writeConcern: {w: 0
 
 #### Import data
 ```sh
-mongoimport tv-shows.json -d movieData -c movies --jsonArray --drop
+#if you are running mongo in docker, copy the file to docker container
+docker cp tv-shows.json mongodb:/tv-shows.json
+#run mongoimport
+#>docker exec <container-name-or-id> mongoimport -d <db-name> -c <c-name> --file /tmp/xxx.json
+
+docker exec mongodb mongoimport -d movieData -c movies --drop --file /tmp/tv-shows.json --jsonArray
 ```
 
 Useful Resources & Links
@@ -486,3 +491,18 @@ Write Concern: https://docs.mongodb.com/manual/reference/write-concern/
 Using mongoimport: https://docs.mongodb.com/manual/reference/program/mongoimport/index.html
 
 
+## Reading Documents with operators
+
+#### methods, filter, operators
+```sh
+#find is a method
+db.collectionName.find()
+
+#filter {field: value}
+db.collectionName.find({field: value})
+#operators $gt, $gte, $lt, $lte, $ne, $in, $nin, $or, $and, $not, $nor, $exists, $type, $expr, $jsonSchema, $mod, $regex, $text, $where
+db.collectionName.find({field: {$gt: value}})
+
+
+
+```
