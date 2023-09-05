@@ -383,3 +383,22 @@ The MongoDB Data Types: https://docs.mongodb.com/manual/reference/bson-types/
 
 More on Schema Validation: https://docs.mongodb.com/manual/core/schema-validation/
 
+
+## Exploring The Shell & The Server
+
+help, you can run help at different levels like db.help(), db.collection.help(), db.collection.find().help()
+```sh
+use posts
+db.help()
+db.users.help()
+db.users.count.help()
+```
+
+Helpful Articles/ Docs:
+
+More Details about Config Files: https://docs.mongodb.com/manual/reference/configuration-options/
+
+More Details about the Shell (mongo) Options: https://www.mongodb.com/docs/manual/reference/method/
+
+More Details about the Server (mongod) Options: https://docs.mongodb.com/manual/reference/program/mongod/
+
