@@ -470,7 +470,7 @@ db.companies.insertOne({name: "Maria", stock: 100, _id: 7}, {writeConcern: {w: 0
 #### Import data
 ```sh
 #if you are running mongo in docker, copy the file to docker container
-docker cp tv-shows.json mongodb:/tv-shows.json
+docker cp tv-shows.json mongodb:/tmp/tv-shows.json
 #run mongoimport
 #>docker exec <container-name-or-id> mongoimport -d <db-name> -c <c-name> --file /tmp/xxx.json
 
@@ -501,8 +501,166 @@ db.collectionName.find()
 #filter {field: value}
 db.collectionName.find({field: value})
 #operators $gt, $gte, $lt, $lte, $ne, $in, $nin, $or, $and, $not, $nor, $exists, $type, $expr, $jsonSchema, $mod, $regex, $text, $where
-db.collectionName.find({field: {$gt: value}})
+db.collectionName.find({field: {$gt: value}}
+```
 
+#### query selectors
+* comparison
+* logical
+* element
+* evaluation
+* array
+* comments
+* geospatial
 
+#### projection operators
+* $
+* $elemMatch
+* $slice
+* $meta etc..
 
+##### findOne() and find() methods
+find gives us cursor back and we can use it to iterate over the documents
+fineone returns first document matching filter
+
+```sh
+db.collectionName.findOne(filter, projection)
+db.collectionName.find(filter, projection)
+```
+```sh
+db.movies.find({runtime: 60})
+```
+
+##### comparison operators example
+```sh
+db.movies.find({runtime: {$eq: 60}})
+db.movies.find({runtime: {$ne: 60}})
+db.movies.find({runtime: {$gt: 60}})
+db.movies.find({runtime: {$gte: 60}})
+```
+
+##### querying embedded Fields and Arrays
+```sh
+db.movies.find({"rating.average": {$gt: 7}})
+db.movies.find({genres: "Drama"})
+
+#check the equality match in array
+db.movies.find({genres: ["Drama"]})
+db.movies.find({genres: ["Drama", "Horror"]})
+db.movies.find({genres: {$all: ["Drama", "Horror"]}})
+db.movies.find({genres: {$in: ["Drama", "Horror"]}})
+db.movies.find({genres: {$nin: ["Drama", "Horror"]}})
+```
+
+##### logical operators
+```sh
+db.movies.find({$or: [{"rating.average": {$lt: 5}}, {"rating.average": {$gt: 9.3}}]})
+db.movies.find({$nor: [{"rating.average": {$lt: 5}}, {"rating.average": {$gt: 9.3}}]})
+db.movies.find({$and: [{"rating.average": {$gt: 9}}, {genres: "Drama"}]})
+#same as above, default is and
+
+#below is genres will be replaced with horror, it overrides the previous genres
+db.movies.find({genres: "Drama", genres: "Horror"}).count()
+
+db.movies.find({"rating.average": {$gt: 9}, genres: "Drama"})
+db.movies.find({"rating.average": {$gt: 9}, genres: "Drama"})
+
+db.movies.find({$and: [{"rating.average": {$gt: 9}}, {genres: "Drama"}, {genres: "Horror"}]})
+db.movies.find({$and: [{"rating.average": {$gt: 9}}, {genres: {$in: ["Drama", "Horror"]}}]})
+db.movies.find({runtime: {$not: {$eq: 60}}}).count()
+
+```
+
+##### element operators
+```sh
+db.movies.find({summary: {$exists: true}})
+db.movies.find({summary: {$exists: false}})
+db.movies.find({runtime: {$exists: true, $gte: 90}})
+db.movies.find({runtime: {$exists: true, $ne: null, $gte: 90}})
+```
+
+##### type operators
+
+```sh
+db.movies.find({runtime: {$type: "int"}})
+db.movies.find({runtime: {$type: ["int", "string"]}})
+```
+
+##### evaluation operators
+```sh
+db.movies.find({$expr: {$gt: ["$runtime", "$budget"]}})
+db.movies.find({$expr: {$gt: ["$runtime", "$boxOffice.budget"]}})
+db.movies.find({$expr: {$gt: ["$runtime", {$add: ["$boxOffice.budget", "$boxOffice.domesticGross"]}]}})
+```
+
+regex 
+```sh
+db.movies.find({summary: {$regex: /musical/}})
+db.movies.find({summary: {$regex: /musical/, $options: "i"}})
+```
+
+expr
+```sh
+db.movies.find({$expr: {$gt: ["$runtime", "$budget"]}})
+db.movies.find({$expr: {$gt: ["$runtime", "$boxOffice.budget"]}})
+db.movies.find({$expr: {$gt: ["$runtime", {$add: ["$boxOffice.budget", "$boxOffice.domesticGross"]}]}})
+
+db.sales.find({$expr: {$gt: [{$cond: {if: {$gte: ["$volume", 190]}, then: {$subtract: ["$volume", 30]}, else: "$volume"}}, "$target"]}}).pretty()
+```
+
+Excersise
+```sh
+docker cp boxoffice.json mongodb:/tmp/boxoffice.json
+docker exec mongodb mongoimport -d boxofficeData -c movies  --drop --file /tmp/boxoffice.json --jsonArray
+use boxofficeData
+
+db.movies.find({"meta.rating": {$gt: 9.2}, "meta.runtime": {$lt: 100}}).count()
+db.movies.find({genre: {$in: ["action","drama"]}}).count()
+
+#all the movies where visitor exceeded expectedVisitors
+
+db.movies.find({$expr: {$gt: ["$visitors", "$expectedVisitors"]}}).count()
+
+```
+
+##### querying arrays 
+dot operator to access the fields in array like nested documents
+```sh
+db.movies.find({genre: "Drama"})
+db.movies.find({genre: ["Drama", "Horror"]})
+db.movies.find({genre: {$all: ["Drama", "Horror"]}})
+```
+
+size operator, it looks for exact size of array not greater than or less than
+```sh
+db.movies.find({genre: {$size: 2}})
+```
+
+all operator, it will not check exact match with order
+```sh
+#it will return count 1
+db.movies.find({genre: ["action", "thriller"]}).count()
+
+#it will return count 3
+db.movies.find({genre: {$all: ["action", "thriller"]}}).count()
+```
+
+elemMatch operator, it will check for exact match in array of objects
+```sh
+use userData
+db.users.insertMany([{name: "Max", hobbies: [{title: "Sports", frequency: 3}, {title: "Cooking", frequency: 6}]}, {name: "Anna", hobbies: [{title: "Sports", frequency: 2}, {title: "Yoga", frequency: 3}]}])
+#it will return count 2, below will check frequency in all objects in array, in this case it is checking of Anna's yoga as well
+db.users.find({$and: [{"hobbies.title": "Sports"}, {"hobbies.frequency": {$gte: 3}}]}).count()
+#it will return count 1
+db.users.find({hobbies: {$elemMatch: {title: "Sports", frequency: {$gte: 3}}}}).count()
+```
+
+excersise
+```sh
+# find all movies with exactly 2 genres
+db.movies.find({genre: {$size: 2}}).count()
+# find all movies which aired in 2018
+db.movies.find({"meta.aired": 2018}).count()
+# find all movies with ratings greater than 8 and lower than 10 
+db.movies.find({"meta.rating": {$gt: 8, $lt: 10}}).count()
 ```
