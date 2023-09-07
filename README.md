@@ -664,3 +664,71 @@ db.movies.find({"meta.aired": 2018}).count()
 # find all movies with ratings greater than 8 and lower than 10 
 db.movies.find({"meta.rating": {$gt: 8, $lt: 10}}).count()
 ```
+
+
+#### understanding cursor
+request the batch of data from the server
+shell gives you 20 records by default
+
+```sh
+use movieData
+db.movies.find().count()
+db.movies.find().next()
+db.movies.find().next()
+
+#store the result in variable
+const dataCursor = db.movies.find()
+dataCursor.next()
+
+#iterate over the cursor
+dataCursor.forEach(doc => printjson(doc))
+dataCursor.hasNext()
+```
+
+##### sorting cursor results
+sort function takes document which describe how to sort the data, 1 for ascending and -1 for descending
+```sh
+db.movies.find().sort({"rating.average": 1})
+db.movies.find().sort({"rating.average": -1})
+db.movies.find().sort({"rating.average": -1, "runtime": 1})
+```
+
+##### skipping and limiting results
+skip function takes number of documents to skip
+```sh
+ db.movies.find().sort({"rating.average": -1, "runtime": 1}).skip(100).count()
+ db.movies.find().sort({"rating.average": -1, "runtime": 1}).skip(100).limit(10).count()
+```
+
+##### using projection to shape our results
+```sh
+db.movies.find({}, {name: 1, genres: 1, runtime: 1, rating: 1, _id: 0})
+db.movies.find({}, {name: 1, genres: 1, runtime: 1, rating: 1, _id: 0}).pretty()
+db.movies.find({}, {name: 1, genres: 1, runtime: 1, rating: 1, _id: 0}).sort({"rating.average": -1}).skip(10).limit(10).pretty()
+```
+
+projection in array
+```sh
+db.movies.find({genres: "Drama"},{"genres.$": 1}).pretty()
+db.movies.find({genres: {$all: ["Drama", "Horror"]}},{"genres.$": 1}).pretty()
+db.movies.find({genres: "Drama"}, {"genres": {$elemMatch: {$eq: "Horror"}}}).pretty()
+```
+
+##### understanding slice 
+slice operator is used to limit the number of elements in array
+```sh
+#it will return first 2 elements in array genres
+db.movies.find({"rating.average": {$gt: 9}}, {genres: {$slice: 2}}).pretty()
+#skip first 1 element and return next 2 elements
+db.movies.find({"rating.average": {$gt: 9}}, {genres: {$slice: [1, 2]}, name: 1}).pretty()
+```
+
+Useful Resources & Links
+Helpful Articles/ Docs:
+
+More on find(): https://docs.mongodb.com/manual/reference/method/db.collection.find/
+
+More on Cursors: https://docs.mongodb.com/manual/tutorial/iterate-a-cursor/
+
+Query Operator Reference: https://docs.mongodb.com/manual/reference/operator/query/
+
