@@ -732,3 +732,119 @@ More on Cursors: https://docs.mongodb.com/manual/tutorial/iterate-a-cursor/
 
 Query Operator Reference: https://docs.mongodb.com/manual/reference/operator/query/
 
+## update operations
+
+updateOne() will udpate the first document matching the filter
+```sh
+db.collectionName.updateOne(filter, update, options)
+
+db.users.updateOne({_id: ObjectId("64fa26a521d63770a1ff30d9")}, {$set: {hobbies: [{titile: "Sports", frequency: 5}, {title: "Cooking", frequency: 3}, {title: "Hiking", frequency: 1}]}})
+
+#update many 
+db.users.updateMany({"hobbies.title": "Sports"}, {$set: {isSporty: true}})
+
+#update multiple fields
+db.users.updateOne({_id: ObjectId("64fa26a521d63770a1ff30d9")}, {$set: {age: 40, phone: 12345678990}})
+
+#increment by 2
+db.users.updateOne({name: "Manuel"}, {$inc: {age: 2}})
+#decrement by 1
+db.users.updateO
+#inc and set together
+db.users.updateOne({name: "Manuel"}, {$inc: {age: 2}}, {$set: {isSporty: false}})
+#inc and set on same field will throw error
+```
+
+##### min, max and mul
+```sh
+# update the age only if current age is higher, below will change the age of Chris from 40 to 35
+db.users.updateOne({name: "Chris"}, {$min: {age: 35}})
+
+# below will change the age of Chris from 35 to 90, old value is lower than new value
+db.users.updateOne({name: "Chris"}, {$max: {age: 90}})
+
+#get rid of field, set it to null
+db.users.updateMany({isSporty: true}, {$set: {phone: null}})
+#remove field from all documents
+db.users.updateMany({}, {$unset: {phone: ""}})
+
+
+```
+
+##### rename field
+```sh
+db.users.updateMany({}, {$rename: {age: "totalAge"}})
+```
+
+##### understanding upsert
+```sh
+# upsert will will update the document if it exists, if it doesn't exist it will insert the document
+# you can pass third parameter as options, upsert: true
+# user Maria doesn't exist, it will not insert/update the document
+db.users.updateOne({name: "Maria"}, {$set: {age: 29}})
+# user Maria doesn't exist, it will insert the document
+db.users.updateOne({name: "Maria"}, {$set: {age: 29}}, {upsert: true})
+```
+
+##### updating matched arrays
+
+```sh
+# find query
+db.users.find({hobbies: {$elemMatch: {title: "Sports", frequency: {$gte: 3}}}}).count()
+# update query, it will update the hobbies array with highFrequency field
+db.users.updateMany({hobbies: {$elemMatch: {title: "Sports", frequency: {$gte: 3}}}}, {$set: {"hobbies.$.highFrequency": true}})
+
+#update all array docs
+db.users.updateMany({totalAge: {$gt: 30}}, {$inc: {"hobbies.$[].frequency": -1}})
+
+```
+Finding and updating specific fields
+```sh
+db.users.updateMany({"hobbies.frequency": {$gt: 2}}, {$set: {"hobbies.$[el].goodFrequency": true}}, {arrayFilters: [{"el.frequency": {$gt: true}}] })
+```
+
+Adding elements to arrays
+```sh
+db.users.updateOne({name: "Maria"}, {$push: {hobbies: {title: "Good Wine", frequency: 1}}})
+db.users.updateOne({name: "Maria"}, {$push: {hobbies: {$each: [{title: "Hiking", frequency: 2}, {title: "Swimming", frequency: 3}], $sort: {frequency: -1}}}})
+```
+
+removing elements from arrays
+```sh
+db.users.updateOne({name: "Maria"}, {$pull: {hobbies: {title: "Hiking"}}})
+# remove last element from array, 1 is last and -1 is first
+db.users.updateOne({name: "Maria"}, {$pop: {hobbies: 1}})
+```
+understanding addToSet
+```sh
+# addToSet will add element to array only if it doesn't exist
+db.users.updateOne({name: "Maria"}, {$addToSet: {hobbies: {title: "Hiking", frequency: 2}}})
+```
+
+Useful Resources & Links
+Helpful Articles/ Docs:
+
+Official Document Updating Docs: https://docs.mongodb.com/manual/tutorial/update-documents/
+
+## understanding delete operations
+
+deleteOne
+```sh
+db.collectionName.deleteOne(filter, options)
+db.users.deleteOne({name: "Maria"})
+db.users.deleteMany({age: {$gt: 30}, isSporty: true})
+db.users.deleteMany({totalAge: {$exists: false}, isSporty: true})
+
+#delete all documents
+db.users.deleteMany({})
+db.users.drop()
+
+#delete database
+db.dropDatabase()
+```
+
+Useful Resources & Links
+Helpful Articles/ Docs:
+
+Official Document Deletion Docs: https://docs.mongodb.com/manual/tutorial/remove-documents/
+
