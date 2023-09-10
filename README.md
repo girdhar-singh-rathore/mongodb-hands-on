@@ -1117,3 +1117,43 @@ More on partialFilterExpressions: https://docs.mongodb.com/manual/core/index-par
 Supported default_languages: https://docs.mongodb.com/manual/reference/text-search-languages/#text-search-languages
 
 How to use different languages in the same index: https://docs.mongodb.com/manual/tutorial/specify-language-for-text-index/#create-a-text-index-for-a-collection-in-multiple-languages
+
+
+## working with geospatial data
+* adding geoJSON data
+
+```sh
+use awesomeplaces
+db.places.insertOne({name: "California Academy of Sciences", location: {type: "Point", coordinates: [-122.4722553, 37.7670169]}})
+#below will require geonear index
+db.places.find({location: {$near: {$geometry: {type: "Point", coordinates: [-122.4722553, 37.7670169]}, $maxDistance: 2000}}})
+
+#create geospacial index
+db.places.createIndex({location: "2dsphere"})
+db.places.find({location: {$near: {$geometry: {type: "Point", coordinates: [-122.4722553, 37.7670169]}, $maxDistance: 2000}}})
+
+db.places.insertOne({name: "Golden Gate Park", location: {type: "Point", coordinates: [-122.490402, 37.769458]}})
+db.places.insertOne({name: "Conservatory of Flowers", location: {type: "Point", coordinates: [-122.4615748, 37.7723871]}})
+db.places.insertOne({name:"Nopa", location: {type: "Point", coordinates: [-122.438473, 37.774197]}})
+db.places.find({location: {$near: {$geometry: {type: "Point", coordinates: [-122.4722553, 37.7670169]}, $maxDistance: 2000}}})
+
+#find the places inside certain area (polygon), use geoWithin, geometry and polygon
+db.places.find({location: {$geoWithin: {$geometry: {type: "Polygon", coordinates: [[[-122.44651412963867, 37.77540892274736], [-122.44651412963867, 37.774144901936536], [-122.44449615478516, 37.774144901936536], [-122.44449615478516, 37.77540892274736], [-122.44651412963867, 37.77540892274736]]]}}}})
+
+#find out if user is inside the area
+db.areas.insertOne({name: "Golden Gate Park", area: {type: "Polygon", coordinates: [[[-122.44651412963867, 37.77540892274736], [-122.44651412963867, 37.774144901936536], [-122.44449615478516, 37.774144901936536], [-122.44449615478516, 37.77540892274736], [-122.44651412963867, 37.77540892274736]]]}})
+db.areas.createIndex({area: "2dsphere"})
+# geointersects will check if the point is inside the area
+db.areas.find({area: {$geoIntersects: {$geometry: {type: "Point", coordinates: [-122.44651412963867, 37.77540892274736]}}}})
+
+#finding certain places inside the redius, centerSphere will take center and radius around it
+db.places.find({location: {$geoWithin: {$centerSphere: [[-122.44651412963867, 37.77540892274736], 0.01]}}})
+
+```
+Useful Resources & Links
+Helpful Articles/ Docs:
+
+Official Geospatial Docs: https://docs.mongodb.com/manual/geospatial-queries/
+
+Geospatial Query Operators: https://docs.mongodb.com/manual/reference/operator/query-geospatial/
+
