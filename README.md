@@ -848,3 +848,272 @@ Helpful Articles/ Docs:
 
 Official Document Deletion Docs: https://docs.mongodb.com/manual/tutorial/remove-documents/
 
+## working with indexes
+
+index will speed up the find, update, delete operations
+```sh
+db.products.find({seller: "Max"})
+```
+if there is no index on seller field, mongo will scan all the documents to find the seller field
+
+if we create index on seller field, mongo will scan only the index to find the seller field
+index is ordered set of values, and it is stored in separate data structure, it has reference to the document
+
+don't use too many indexes, it will slow down the write operations because mongo has to update the index as well
+
+#### importing persons data to local mongo db
+```sh
+docker cp persons.json mongodb:/tmp/persons.json
+docker exec mongodb mongoimport -d contactData -c contacts --drop --file /tmp/persons.json --jsonArray
+```
+
+#### explain method
+explain method will give you the details about the query
+```sh
+db.collectionName.explain().find({field: value})
+db.contacts.explain().find({"dob.age": {$gt: 60}})
+db.contacts.explain("executionStats").find({"dob.age": {$gt: 60}})
+```
+
+#### creating index
+```sh
+# 1 for ascending and -1 for descending sort
+db.collectionName.createIndex({field: 1})
+db.contacts.createIndex({"dob.age": 1})
+# repeat the same query, it will be faster
+# here collection has 5000 documents, but index has 1222 documents with reference to the original document
+db.contacts.explain("executionStats").find({"dob.age": {$gt: 60}})
+
+```
+
+#### Indexes Behind the Scenes
+What does createIndex() do in detail?
+
+Whilst we can't really see the index, you can think of the index as a simple list of values + pointers to the original document.
+
+Something like this (for the "age" field):
+
+(29, "address in memory/ collection a1")
+
+(30, "address in memory/ collection a2")
+
+(33, "address in memory/ collection a3")
+
+The documents in the collection would be at the "addresses" a1, a2 and a3. The order does not have to match the order in the index (and most likely, it indeed won't).
+
+The important thing is that the index items are ordered (ascending or descending - depending on how you created the index). createIndex({age: 1}) creates an index with ascending sorting, createIndex({age: -1}) creates one with descending sorting.
+
+MongoDB is now able to quickly find a fitting document when you filter for its age as it has a sorted list. Sorted lists are way quicker to search because you can skip entire ranges (and don't have to look at every single document).
+
+Additionally, sorting (via sort(...)) will also be sped up because you already have a sorted list. Of course this is only true when sorting for the age.
+
+
+#### drop index
+```sh
+db.collectionName.dropIndex({field: 1})
+db.contacts.dropIndex({"dob.age": 1})
+```
+
+**if you have an index which return large set or majority of documents, it will be slower than without index**
+
+#### compound index
+```sh
+db.createIndex({field1: 1, field2: 1})
+
+db.contacts.createIndex({"dob.age": 1}, {gender: 1})
+
+#explain the query to search indexscan
+db.contacts.explain().find({"dob.age": 1, gender: "male"})
+
+#below query will not use indexscan
+db.contact.explain().find("dob.age": 1)
+
+#index can also help with sorting, if you have index on field1 and field2, you can sort by field1 and field2
+#below query will use indexscan for both gender and age
+
+db.contacts.explain().find({"dob.age": 35}).sort()
+```
+
+> **Note**:
+**if you are not using indexes and you do a sort on large data set, you can actually time out, 
+because mongodb has threshold of 32mb in memory for sorting,
+if you have no index mongodb will essentially fetch all your document into memory and do the sort there 
+and for large collecitons or large amount of fetch documents, this can simply too much to sort
+so sometimes you also need an indexes not just speed up the query but also to be able to sort at all**
+
+#### understanding default index
+```sh
+#_id is the default index
+db.contacts.getIndexes()
+```
+#### configuring index
+```sh
+#unique index, it will guarantee that the field is unique
+#below will throw error if you try to insert duplicate email
+db.contacts.createIndex({email: 1}, {unique: true})
+#MongoServerError: Index build failed: 9d6ca967-c74f-4c01-b115-c50c3f421ec9: Collection contactData.contacts ( 5d96fb3c-574d-4836-a2f2-22fdd783f63c ) :: caused by :: E11000 duplicate key error collection: contactData.contacts index: email_1 dup key: { email: "abigail.clark@example.com" }
+
+#partial index
+#create index only for male genders
+db.contacts.dropIndex({"dob.age": 1})
+db.contacts.createIndex({"dob.age": 1}, {partialFilterExpression: {gender: "male"}})
+#applying partial index
+
+```
+
+#### understanding time to live index
+```sh
+#it only works on single field index it work on data field
+#time to live index, it will delete the document after certain amount of time
+db.sessions.insertOne({data: "abc", createdAt: new Date()})
+#it will delete the document after 10 seconds 
+db.sessions.createIndex({createdAt: 1}, {expireAfterSeconds: 10})
+```
+
+#### query diagnosis and query planning
+```sh
+#explain()
+# "queryPlanner" =>  show the summery for executed query + winning plan
+# "executionStats" => show the detailed summery for executed query + winning plan + posibliy rejected plans
+# "allPlansExecution" => show the detailed summery for executed query + winning plan + winning plan decision process
+
+#checking milliseconds process time
+#IXSCAN typically beats #COLLSCAN
+#check the number of keys examined
+#check the number of documents examined
+#check the number of documents returned
+
+```
+
+#### understanding covered queries
+```sh
+#query is fully covered by index
+#covered queries, it will not fetch the documents, it will only fetch the index
+#it will be faster than normal queries
+#it will only work if you have index on the field you are querying
+#it will not work if you are querying on field which is not indexed
+#it will not work if you are projecting the field which is not indexed
+
+#for example, if you have index on name field, you can query on name field and project name field, exclucde _id field
+
+db.customers.insertMany([{name: "Max", age: 29, salary: 30000}, {name: "Manu", age: 30, salary: 40000}])
+db.customers.createIndex({name: 1})
+db.customers.explain("executionStats").find({name: "Max"})
+# check the IXSCAN, totalDocsExamined: 1, totalKeysExamined: 1
+#docsExamined could be zero
+db.customers.explain("executionStats").find({name: "Max"}, {_id: 0, name: 1})
+```
+
+#### mongo reject plan 
+
+```shell
+db.customers.createIndex({age: 1, name: 1})
+db.customers.expalin().find({name: "Max", age: 30})
+
+# winning plan is IXSCAN with compound index
+#rejected plan is IXSCAN , just on name index
+
+#mongodb uses different algorithm to find the best plan, and use the best plan for real query
+#mongodb also cashes the plan, so if you run the same query again, it will use the cashed plan
+#mongodb reevaluate the plan every 1000 writes, same for rebuild indexs, or index added or removed, or server restart
+
+db.customers.explain("allPlansExecution").find({name: "Max", age: 30})
+```
+
+#### multi key index
+```sh
+db.contacts.drop()
+db.contacts.insertOne({name: "Max", hobbies: ["Cooking", "Sports"], addresses: [{street: "Main street"}, {street: "Second street"}]})
+db.contacts.createIndex({hobbies: 1})
+db.contacts.explain("executionStats").find({hobbies: "Sports"})
+#check the index, it has isMultiKey: true
+
+db.contacts.createIndex({addresses: 1})
+# below query uses the collscan, because index hold the whole document, not feild on document 
+db.contacts.explain("executionStats").find({"addresses.street": "Main street" })
+# below query uses the indexscan, because index hold the whole document, not feild on document
+db.contacts.explain("executionStats").find({addresses: {street: "Main street"}})
+
+#we can also create index on subdocument
+db.contacts.createIndex({"addresses.street": 1})
+# now below query will use indexscan
+db.contacts.explain("executionStats").find({"addresses.street": "Main street" })
+
+```
+
+#### understanding text indexes 
+it is special kind of multikey index, it is used for text search
+it will turn the text into tokens, and it will create index on tokens
+
+```sh
+db.products.insertMany([{title: "A book about MongoDB and PHP", price: 12.99}, {title: "A Book", description: "This is an awesome book about a yong artist1"}, {title: "Red T-Shirt", description: "This T-Shirt is red and it's pretty awesome!"}])
+db.products.createIndex({description: "text"})
+db.products.find({$text: {$search: "awesome"}})
+#search as sentence
+db.products.find({$text: {$search: "\"awesome book \""}})
+```
+
+#### text indexes and sorting 
+
+mongodb automatically assign score and sort by score
+```sh
+db.products.find({$text: {$search: "awesome T-Shirt"}}, {score: {$meta: "textScore"}})
+db.products.find({$text: {$search: "awesome T-Shirt"}}, {score: {$meta: "textScore"}}).sort({score: {$meta: "textScore"}})
+db.products.dropIndex("description_text")
+# combine text index with other index
+db.products.createIndex({title: "text", description: "text"})
+db.products.insertOne({title: "A Ship", description: "Floating perfectly!"})
+db.products.find({$text: {$search: "ship"}})
+
+#using text indexes to exclude words
+# use - sign to exclude the word
+db.products.find({$text: {$search: "awesome -T-Shirt"}})
+
+db.products.getIndexes()
+db.products.dropIndex("title_text_description_text")
+
+#default language is english, you can change it, weight is used to give more importance to the field
+db.products.createIndex({title: "text", description: "text"}, {default_language: "german", weights: {title: 1, description: 10}})
+db.products.find({$text: {$search: "red"}}, {score: {$meta: "textScore"}})
+```
+
+#### building indexs
+how you add indexes?
+you can add them in two ways
+1. create index in background => collection is not blocked for write operations, slower,
+2. create index in foreground => collection is blocked for write operations, faster
+
+thus far we have been creating index in foreground, it will block the write operations
+```sh
+docker cp credit-rating.js mongodb:/tmp/credit-rating.js
+#it will create one million documents
+docker exec mongodb mongosh /tmp/credit-rating.js
+# it will add credit database
+docker exec -it mongodb mongosh
+user credit
+db.rating.count()
+db.rating.findOne()
+#below will take a bit of time because we are creating index on million documents
+db.rating.createIndex({age: 1})
+db.rating.exaplain("executionStats").find({age: {$gt: 80}}) #it will use indexscan and bit faster
+db.rating.dropIndex({age: 1})
+db.rating.exaplain("executionStats").find({age: {$gt: 80}}) #it will use collscan and bit slower
+#below will create index in foreground, it will block the write operations, if you execute both command in separate tabs it will block the second command for a movement
+db.rating.createIndex({age: 1})
+db.rating.findOne({})
+db.rating.insertOne({personId: "s", age: 100})
+
+#create index in background, it will not block the write operations
+db.rating.dropIndex({age: 1})
+db.rating.createIndex({age: 1}, {background: true})
+
+```
+
+Useful Resources & Links
+Helpful Articles/ Docs:
+
+More on partialFilterExpressions: https://docs.mongodb.com/manual/core/index-partial/
+
+Supported default_languages: https://docs.mongodb.com/manual/reference/text-search-languages/#text-search-languages
+
+How to use different languages in the same index: https://docs.mongodb.com/manual/tutorial/specify-language-for-text-index/#create-a-text-index-for-a-collection-in-multiple-languages
