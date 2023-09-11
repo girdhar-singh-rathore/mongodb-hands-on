@@ -189,3 +189,110 @@ db.persons.aggregate([
 ])
 
 ```
+
+### $group vs $project
+
+group is grouping multiple documents into one document, project is one to one relationship
+group we do sum, count, average, build array but in project we can only transform data include and exclude fields
+
+#### pushing elements into newly created array
+
+```sh
+# importing data
+docker cp array-data.json mongodb:/tmp/array-data.json
+docker exec mongodb mongoimport -d friendsData -c friends --drop --file /tmp/array-data.json --jsonArray
+```
+
+```js
+
+db.friends.aggregate([
+    {$group: {_id: {age: "$age"}, allHobbies: {$push: "$hobbies"}}}
+])
+//unwind the array, it flattens the array
+db.friends.aggregate([
+  {$unwind: "$hobbies"},
+  {$group: {_id: {age: "$age"}, allHobbies: {$push: "$hobbies"}}}
+])
+
+// eliminating duplicates, you can use addToSet instead of push
+db.friends.aggregate([
+  {$unwind: "$hobbies"},
+  {$group: {_id: {age: "$age"}, allHobbies: {$addToSet: "$hobbies"}}}
+])
+
+//using projection with array
+db.friends.aggregate([
+  {$project: {_id: 0, examScore: {$slice: ["$examScores", 2, 1]}}}
+])
+
+//length of array
+db.friends.aggregate([
+  {$project: {_id: 0, numScores: {$size: "$examScores"}}}
+])
+
+//using filter
+db.friends.aggregate([
+  {$project: {_id: 0, examScores: {$filter: {
+    input: "$examScores",
+    as: "sc",
+    cond: {$gt: ["$$sc.score", 60]}
+  }}}}
+])
+// apply multiple operations on array
+db.friends.aggregate([
+    { $unwind: "$examScores" },
+    { $project: { _id: 1, name: 1, age: 1, score: "$examScores.score" } },
+    { $sort: { score: -1 } },
+    { $group: { _id: "$_id", name: { $first: "$name" }, maxScore: { $max: "$score" } } },
+    { $sort: { maxScore: -1 } }
+]).pretty();
+
+```
+
+#### understading $bucket and $bucketAuto stage
+
+```js
+
+db.persons
+  .aggregate([
+    {
+      $bucket: {
+        groupBy: '$dob.age',
+        boundaries: [18, 30, 40, 50, 60, 120],
+        output: {
+          numPersons: { $sum: 1 },
+          averageAge: { $avg: '$dob.age' }
+        }
+      }
+    }
+  ]).pretty()
+
+db.persons.aggregate([
+    {
+      $bucketAuto: {
+        groupBy: '$dob.age',
+        buckets: 5,
+        output: {
+          numPersons: { $sum: 1 },
+          averageAge: { $avg: '$dob.age' }
+        }
+      }
+    }
+  ]).pretty()
+
+// example other pipeline stages
+db.persons.aggregate([
+    { $match: { gender: "male" } },
+    { $project: { _id: 0, gender: 1, name: { $concat: ["$name.first", " ", "$name.last"] }, birthdate: { $toDate: "$dob.date" } } },
+    { $sort: { birthdate: 1 } },
+    { $skip: 10 },
+    { $limit: 10 }
+]).pretty()
+
+```
+
+
+#### How MongoDB Optimizes Your Aggregation Pipelines
+MongoDB actually tries its best to optimize your Aggregation Pipelines without interfering with your logic.
+
+Learn more about the default optimizations MongoDB performs in this article: https://docs.mongodb.com/manual/core/aggregation-pipeline-optimization/
