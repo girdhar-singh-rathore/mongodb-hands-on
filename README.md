@@ -1120,6 +1120,7 @@ How to use different languages in the same index: https://docs.mongodb.com/manua
 
 
 ## working with geospatial data
+
 * adding geoJSON data
 
 ```sh
@@ -1156,4 +1157,6 @@ Helpful Articles/ Docs:
 Official Geospatial Docs: https://docs.mongodb.com/manual/geospatial-queries/
 
 Geospatial Query Operators: https://docs.mongodb.com/manual/reference/operator/query-geospatial/
+
+[Aggregation](aggregation_README.md)
 
