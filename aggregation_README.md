@@ -296,3 +296,67 @@ db.persons.aggregate([
 MongoDB actually tries its best to optimize your Aggregation Pipelines without interfering with your logic.
 
 Learn more about the default optimizations MongoDB performs in this article: https://docs.mongodb.com/manual/core/aggregation-pipeline-optimization/
+
+#### writing pipeline result into new collection
+
+```shell
+use analytics
+```
+
+```js
+
+db.persons.aggregate([
+
+  {$project: {_id: 0, name: 1, email: 1, 
+      birthdate: {$convert: {input: "$dob.date", to: "date"}},
+      age: "$dob.age", 
+      location: {type: "Point", coordinates: [
+    {$convert: {input: "$location.coordinates.longitude", to: "double", onError: 0.0, onNull: 0.0}},
+    {$convert: {input: "$location.coordinates.latitude", to: "double", onError: 0.0, onNull: 0.0}}
+  ]}}},
+  
+  {$project: {_gender: 1, email: 1, birthdate: 1, age: 1, location: 1, fullName: {$concat: [
+    {$toUpper: {$substrCP: ["$name.first", 0, 1]}}, 
+    {$substrCP: ["$name.first", 1, {$subtract: [{$strLenCP: "$name.first"}, 1]}]},
+    " ",
+    {$toUpper: {$substrCP: ["$name.last", 0, 1]}}, 
+    {$substrCP: ["$name.last", 1, {$subtract: [{$strLenCP: "$name.last"}, 1]}]},
+  ]}}},
+
+    {$group: {
+      _id: {birthYear: {$isoWeekYear: "$birthdate"}},
+      numPersons: {$sum: 1}
+    }},
+    
+    {$sort: {numPersons: -1}},
+    {$out: "transformedPersons"}
+])
+```
+
+#### working with $geoNear stage
+geoNear has to be the first stage in pipelin
+
+```shell
+db.transformedPersons.createIndex({location: "2dsphere"})
+```
+
+```js
+db.transformedPersons.aggregate([
+    { 
+      $geoNear: {
+          near: {type: "Point", coordinates: [-18.4, -42.8]},
+          maxDistence: 1000000,
+          query: {age: {$gt: 30}},
+          distanceField: "distance"
+      }  
+    }
+])
+```
+
+Useful Resources & Links
+Helpful Articles/ Docs:
+
+Official Aggregation Framework Docs: https://docs.mongodb.com/manual/core/aggregation-pipeline/
+
+Learn more about $cond: https://docs.mongodb.com/manual/reference/operator/aggregation/cond/
+
